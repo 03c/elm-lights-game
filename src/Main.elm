@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Html exposing (Html, div)
+import Html exposing (Html, div, text)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
 import Html.App exposing (program)
@@ -12,12 +12,22 @@ import Array
 
 
 type alias Model =
-    { isOn : Matrix Bool }
+    { isOn : Matrix (Maybe Bool) }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { isOn = Matrix.repeat 5 5 True }, Cmd.none )
+    ( { isOn =
+            Matrix.repeat 6 6 (Just True)
+                |> Matrix.set 4 3 Nothing
+                |> Matrix.set 2 2 Nothing
+                |> Matrix.set 1 1 (Just False)
+                |> Matrix.set 2 4 (Just False)
+                |> Matrix.set 3 1 (Just False)
+                |> Matrix.set 2 5 (Just False)
+      }
+    , Cmd.none
+    )
 
 
 
@@ -38,7 +48,32 @@ view model =
         [ model.isOn
             |> Matrix.indexedMap lightButton
             |> matrixToDivs
+        , div
+            []
+            [ solvedMsg (isSolved model)
+            ]
         ]
+
+
+solvedMsg : Bool -> Html.Html Msg
+solvedMsg bool =
+    if bool then
+        text "Well Done! You solved the puzzle."
+    else
+        text "Keep Trying!"
+
+
+isSolved : Model -> Bool
+isSolved model =
+    let
+        isOn maybeIsOn =
+            maybeIsOn
+                |> Maybe.withDefault False
+
+        onLights =
+            Matrix.filter isOn model.isOn
+    in
+        Array.isEmpty onLights
 
 
 matrixToDivs : Matrix (Html.Html Msg) -> Html.Html Msg
@@ -58,24 +93,37 @@ matrixToDivs matrix =
             |> Html.div []
 
 
-lightButton : Int -> Int -> Bool -> Html Msg
-lightButton x y isOn =
-    div
-        [ style
-            [ ( "width", "35px" )
-            , ( "height", "35px" )
-            , ( "margin", "2px" )
-            , ( "display", "inline-block" )
-            , ( "background-color"
-              , if isOn then
-                    "red"
-                else
-                    "grey"
-              )
-            ]
-        , onClick (Toggle { x = x, y = y })
-        ]
-        []
+lightButton : Int -> Int -> Maybe Bool -> Html Msg
+lightButton x y maybeIsOn =
+    case maybeIsOn of
+        Just isOn ->
+            div
+                [ style
+                    [ ( "width", "35px" )
+                    , ( "height", "35px" )
+                    , ( "margin", "2px" )
+                    , ( "display", "inline-block" )
+                    , ( "background-color"
+                      , if isOn then
+                            "red"
+                        else
+                            "grey"
+                      )
+                    ]
+                , onClick (Toggle { x = x, y = y })
+                ]
+                []
+
+        Nothing ->
+            div
+                [ style
+                    [ ( "width", "35px" )
+                    , ( "height", "35px" )
+                    , ( "margin", "2px" )
+                    , ( "display", "inline-block" )
+                    ]
+                ]
+                []
 
 
 
@@ -93,11 +141,11 @@ update msg model =
             ( { model | isOn = toggleLight index model.isOn }, Cmd.none )
 
 
-toggleLight : LightIndex -> Matrix Bool -> Matrix Bool
+toggleLight : LightIndex -> Matrix (Maybe Bool) -> Matrix (Maybe Bool)
 toggleLight indexToToggle matrix =
     let
         toggleBool bool =
-            not bool
+            Maybe.map not bool
     in
         matrix
             |> Matrix.update indexToToggle.x indexToToggle.y toggleBool
