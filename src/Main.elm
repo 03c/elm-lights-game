@@ -58,7 +58,7 @@ view model =
 solvedMsg : Bool -> Html.Html Msg
 solvedMsg bool =
     if bool then
-        text "Well Done! You solved the puzzle."
+        text "Well Done! You solved the puzzle!"
     else
         text "Keep Trying!"
 
